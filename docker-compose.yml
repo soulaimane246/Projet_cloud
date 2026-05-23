@@ -1,0 +1,142 @@
+version: '3.9'
+
+services:
+  # RabbitMQ pour la communication asynchrone entre les services
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    healthcheck:
+      test: rabbitmq-diagnostics ping
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - teamtask-network
+
+  # Bases de données MongoDB pour chaque service
+  mongo-auth:
+    image: mongo:6
+    container_name: mongo-auth
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-auth-data:/data/db
+    networks:
+      - teamtask-network
+
+  mongo-projects:
+    image: mongo:6
+    container_name: mongo-projects
+    ports:
+      - "27018:27017"
+    volumes:
+      - mongo-projects-data:/data/db
+    networks:
+      - teamtask-network
+
+  mongo-tasks:
+    image: mongo:6
+    container_name: mongo-tasks
+    ports:
+      - "27019:27017"
+    volumes:
+      - mongo-tasks-data:/data/db
+    networks:
+      - teamtask-network
+
+  mongo-history:
+    image: mongo:6
+    container_name: mongo-history
+    ports:
+      - "27020:27017"
+    volumes:
+      - mongo-history-data:/data/db
+    networks:
+      - teamtask-network
+
+  # Services microservices
+  auth-service:
+    build: ./auth-service
+    container_name: auth-service
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: 3000
+      MONGO_URI: mongodb://mongo-auth:27017/auth
+      JWT_SECRET: supersecretkey123
+      JWT_EXPIRES_IN: 7d
+    depends_on:
+      mongo-auth:
+        condition: service_started
+    networks:
+      - teamtask-network
+
+  project-service:
+    build: ./project-service
+    container_name: project-service
+    ports:
+      - "3001:3001"
+    environment:
+      PORT: 3001
+      MONGO_URI: mongodb://mongo-projects:27017/projects
+      JWT_SECRET: supersecretkey123
+    depends_on:
+      mongo-projects:
+        condition: service_started
+    networks:
+      - teamtask-network
+
+  task-service:
+    build: ./task-service
+    container_name: task-service
+    ports:
+      - "3002:3002"
+    environment:
+      PORT: 3002
+      MONGO_URI: mongodb://mongo-tasks:27017/tasks
+      JWT_SECRET: supersecretkey123
+      RABBITMQ_URL: amqp://rabbitmq:5672
+      PROJECT_SERVICE_URL: http://project-service:3001
+    depends_on:
+      mongo-tasks:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
+      project-service:
+        condition: service_started
+    networks:
+      - teamtask-network
+
+  history-service:
+    build: ./history-service
+    container_name: history-service
+    ports:
+      - "3003:3003"
+    environment:
+      PORT: 3003
+      MONGO_URI: mongodb://mongo-history:27017/history
+      RABBITMQ_URL: amqp://rabbitmq:5672
+      JWT_SECRET: supersecretkey123
+    depends_on:
+      mongo-history:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - teamtask-network
+
+volumes:
+  mongo-auth-data:
+  mongo-projects-data:
+  mongo-tasks-data:
+  mongo-history-data:
+
+networks:
+  teamtask-network:
+    driver: bridge
