@@ -2,18 +2,28 @@
 const amqp = require('amqplib');
 
 let channel;
+let connectionPromise;
 
 const connectRabbitMQ = async () => {
   try {
     const rabbitmqUrl = process.env.RABBITMQ_URL;
-    const connection = await amqp.connect(rabbitmqUrl);
-    channel = await connection.createChannel();
+    if (connectionPromise) {
+      return connectionPromise;
+    }
 
-    // Déclarer la queue durable pour les événements de tâche
-    await channel.assertQueue('task.events', { durable: true });
+    connectionPromise = amqp.connect(rabbitmqUrl).then(async (connection) => {
+      channel = await connection.createChannel();
 
-    console.log('RabbitMQ connecté et queue déclarée');
+      // Déclarer la queue durable pour les événements de tâche
+      await channel.assertQueue('task.events', { durable: true });
+
+      console.log('RabbitMQ connecté et queue déclarée');
+      return channel;
+    });
+
+    await connectionPromise;
   } catch (error) {
+    connectionPromise = undefined;
     console.error('Erreur de connexion RabbitMQ:', error.message);
     // Retry après 5 secondes
     setTimeout(connectRabbitMQ, 5000);
@@ -23,6 +33,12 @@ const connectRabbitMQ = async () => {
 // Publier un événement dans la queue
 const publishEvent = async (data) => {
   try {
+    if (!channel && !connectionPromise) {
+      await connectRabbitMQ();
+    } else if (!channel && connectionPromise) {
+      await connectionPromise;
+    }
+
     if (!channel) {
       console.error('Channel RabbitMQ non disponible');
       return;

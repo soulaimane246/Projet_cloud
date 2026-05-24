@@ -11,7 +11,7 @@ const createTask = async (req, res) => {
     // Vérifier que le projet existe via REST API
     try {
       const projectServiceUrl = process.env.PROJECT_SERVICE_URL;
-      const token = req.headers.authorization;
+      const token = req.authHeader || (req.token ? `Bearer ${req.token}` : req.headers.authorization);
 
       await axios.get(`${projectServiceUrl}/api/projects/${projectId}`, {
         headers: { Authorization: token },
@@ -92,7 +92,7 @@ const updateTaskStatus = async (req, res) => {
     // Vérifier que le projet existe via REST API
     try {
       const projectServiceUrl = process.env.PROJECT_SERVICE_URL;
-      const token = req.headers.authorization;
+      const token = req.authHeader || (req.token ? `Bearer ${req.token}` : req.headers.authorization);
 
       await axios.get(
         `${projectServiceUrl}/api/projects/${task.projectId}`,

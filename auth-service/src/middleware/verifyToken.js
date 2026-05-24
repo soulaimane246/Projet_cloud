@@ -3,19 +3,22 @@ const jwt = require('jsonwebtoken');
 
 const verifyToken = (req, res, next) => {
   try {
-    // Extraire le token du header Authorization
+    // Extraire le token du header Authorization (Bearer <token> ou token brut)
     const authHeader = req.headers.authorization;
     if (!authHeader) {
       return res.status(401).json({ error: 'Token absent' });
     }
 
-    const token = authHeader.split(' ')[1];
+    const parts = authHeader.trim().split(/\s+/);
+    const token = parts.length === 2 && /^bearer$/i.test(parts[0]) ? parts[1] : authHeader.trim();
     if (!token) {
       return res.status(401).json({ error: 'Format du token invalide' });
     }
 
     // Vérifier et décoder le token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.token = token;
+    req.authHeader = `Bearer ${token}`;
     req.user = {
       id: decoded.id,
       email: decoded.email,
