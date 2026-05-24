@@ -1,5 +1,7 @@
 // Application Express principale du service de tâches
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '..', '.env') });
+require('dotenv').config({ path: path.resolve(__dirname, '..', '..', '.env') });
 const express = require('express');
 const connectDB = require('./config/db');
 const { connectRabbitMQ } = require('./config/rabbitmq');
