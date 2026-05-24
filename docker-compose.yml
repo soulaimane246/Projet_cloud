@@ -101,7 +101,7 @@ services:
       PORT: 3002
       MONGO_URI: mongodb://mongo-tasks:27017/tasks
       JWT_SECRET: supersecretkey123
-      RABBITMQ_URL: amqp://rabbitmq:5672
+      RABBITMQ_URL: amqp://guest:guest@host.docker.internal:5672
       PROJECT_SERVICE_URL: http://project-service:3001
     depends_on:
       mongo-tasks:
@@ -121,7 +121,7 @@ services:
     environment:
       PORT: 3003
       MONGO_URI: mongodb://mongo-history:27017/history
-      RABBITMQ_URL: amqp://rabbitmq:5672
+      RABBITMQ_URL: amqp://guest:guest@host.docker.internal:5672
       JWT_SECRET: supersecretkey123
     depends_on:
       mongo-history:
