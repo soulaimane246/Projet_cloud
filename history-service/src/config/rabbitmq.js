@@ -19,7 +19,11 @@ const startConsumer = async () => {
     channel.consume('task.events', async (msg) => {
       try {
         if (msg) {
-          const data = JSON.parse(msg.content.toString());
+          const rawContent = msg.content.toString();
+          console.log('Message brut reçu:', rawContent);
+          
+          const data = JSON.parse(rawContent);
+          console.log('Message parsé:', data);
 
           // Créer une entrée d'historique
           const history = new History(data);
